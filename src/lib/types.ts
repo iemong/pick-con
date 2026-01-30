@@ -41,6 +41,16 @@ export interface Rect {
   height: number
 }
 
+export interface CaptureRequest {
+  type: "PICK_CON_CAPTURE"
+}
+
+export interface CaptureResponse {
+  success: boolean
+  dataUrl?: string
+  error?: string
+}
+
 export interface MarkdownInput {
   instruction: string
   pageUrl: string
