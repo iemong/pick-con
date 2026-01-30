@@ -1,0 +1,41 @@
+{
+  "name": "pick-con",
+  "displayName": "pick-con",
+  "version": "0.0.1",
+  "description": "Web要素のコンテキスト情報をMarkdown形式で生成するChrome拡張",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo build --zip"
+  },
+  "dependencies": {
+    "plasmo": "^0.89.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.3.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "esbuild",
+      "lmdb",
+      "msgpackr-extract",
+      "sharp"
+    ]
+  },
+  "manifest": {
+    "permissions": [
+      "activeTab"
+    ],
+    "host_permissions": [
+      "<all_urls>"
+    ]
+  }
+}

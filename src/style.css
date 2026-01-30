@@ -1,0 +1,5 @@
+:host {
+  pointer-events: none !important;
+  overflow: visible !important;
+  z-index: 2147483647 !important;
+}
