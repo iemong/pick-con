@@ -7,6 +7,7 @@ interface Props {
   elementInfo: ElementInfo
   frameworkInfo: FrameworkInfo | null
   componentInfo: ComponentInfo | null
+  screenshotDataUrl: string | null
   onClose: () => void
 }
 
@@ -14,13 +15,14 @@ export default function Panel({
   elementInfo,
   frameworkInfo,
   componentInfo,
+  screenshotDataUrl,
   onClose,
 }: Props) {
   const [instruction, setInstruction] = useState("")
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<"screenshot" | "markdown" | false>(false)
 
-  const handleCopy = useCallback(async () => {
-    const markdown = generateMarkdown({
+  const buildMarkdown = useCallback(() => {
+    return generateMarkdown({
       instruction,
       pageUrl: location.href,
       pageTitle: document.title,
@@ -28,24 +30,60 @@ export default function Panel({
       elementInfo,
       componentInfo,
     })
+  }, [instruction, frameworkInfo, elementInfo, componentInfo])
 
+  const copyTextFallback = useCallback((text: string) => {
     try {
-      await navigator.clipboard.writeText(markdown)
-    } catch {
-      // Fallback for contexts where clipboard API is unavailable
       const textarea = document.createElement("textarea")
-      textarea.value = markdown
+      textarea.value = text
       textarea.style.position = "fixed"
       textarea.style.opacity = "0"
       document.body.appendChild(textarea)
       textarea.select()
       document.execCommand("copy")
       document.body.removeChild(textarea)
+    } catch {
+      // silently fail
+    }
+  }, [])
+
+  const handleCopyWithScreenshot = useCallback(async () => {
+    const markdown = buildMarkdown()
+
+    try {
+      const response = await fetch(screenshotDataUrl!)
+      const blob = await response.blob()
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": new Blob([markdown], { type: "text/plain" }),
+          "image/png": blob,
+        }),
+      ])
+    } catch {
+      // Fallback: copy text only
+      try {
+        await navigator.clipboard.writeText(markdown)
+      } catch {
+        copyTextFallback(markdown)
+      }
     }
 
-    setCopied(true)
+    setCopied("screenshot")
     setTimeout(() => setCopied(false), 2000)
-  }, [instruction, frameworkInfo, elementInfo, componentInfo])
+  }, [buildMarkdown, screenshotDataUrl, copyTextFallback])
+
+  const handleCopyMarkdown = useCallback(async () => {
+    const markdown = buildMarkdown()
+
+    try {
+      await navigator.clipboard.writeText(markdown)
+    } catch {
+      copyTextFallback(markdown)
+    }
+
+    setCopied("markdown")
+    setTimeout(() => setCopied(false), 2000)
+  }, [buildMarkdown, copyTextFallback])
 
   return (
     <div
@@ -157,23 +195,49 @@ export default function Panel({
         />
       </div>
 
-      {/* Copy button */}
-      <div style={{ padding: "0 16px 16px" }}>
+      {/* Copy buttons */}
+      <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         <button
-          onClick={handleCopy}
+          onClick={handleCopyWithScreenshot}
+          disabled={!screenshotDataUrl}
           style={{
             width: "100%",
             padding: "10px 0",
-            backgroundColor: copied ? "#a6e3a1" : "#cba6f7",
-            color: copied ? "#1e1e2e" : "#1e1e2e",
+            backgroundColor: copied === "screenshot"
+              ? "#a6e3a1"
+              : screenshotDataUrl
+                ? "#cba6f7"
+                : "#45475a",
+            color: "#1e1e2e",
             border: "none",
             borderRadius: 8,
             fontWeight: 600,
             fontSize: 13,
-            cursor: "pointer",
+            cursor: screenshotDataUrl ? "pointer" : "default",
             transition: "background-color 0.2s",
+            opacity: screenshotDataUrl ? 1 : 0.6,
           }}>
-          {copied ? "Copied!" : "Copy Markdown"}
+          {copied === "screenshot"
+            ? "Copied!"
+            : screenshotDataUrl
+              ? "Copy with Screenshot"
+              : "Capturing..."}
+        </button>
+        <button
+          onClick={handleCopyMarkdown}
+          style={{
+            width: "100%",
+            padding: "10px 0",
+            backgroundColor: copied === "markdown" ? "#a6e3a1" : "transparent",
+            color: copied === "markdown" ? "#1e1e2e" : "#cdd6f4",
+            border: "1px solid #45475a",
+            borderRadius: 8,
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: "pointer",
+            transition: "background-color 0.2s, color 0.2s",
+          }}>
+          {copied === "markdown" ? "Copied!" : "Copy Markdown Only"}
         </button>
       </div>
     </div>
