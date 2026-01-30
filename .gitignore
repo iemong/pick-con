@@ -1,5 +1,4 @@
 node_modules/
-build/
 .plasmo/
 *.log
 .DS_Store
