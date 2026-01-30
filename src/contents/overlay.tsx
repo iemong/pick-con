@@ -229,6 +229,18 @@ export default function Overlay() {
     setScreenshotDataUrl(null)
   }, [])
 
+  // Close panel on Escape key
+  useEffect(() => {
+    if (!showPanel) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose()
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [showPanel, handleClose])
+
   if (!isActive && !showPanel && !selectedRect) return null
 
   return (
