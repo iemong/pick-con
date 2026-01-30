@@ -54,6 +54,58 @@ pnpm build
 6. AIエディタに貼り付けて活用してください
 7. `Esc` キーでパネルを閉じます
 
+## 出力例
+
+「Copy with Screenshot」ではスクリーンショット画像と以下のMarkdownが同時にクリップボードにコピーされます。AIエディタに貼り付けると、画像とテキストの両方が渡されます。
+
+### React (Next.js) サイトの場合
+
+```markdown
+## User Instruction
+この保存ボタンをクリックしたらconfirmダイアログを表示するようにしたい
+
+## Page Context
+- **URL**: https://example.com/dashboard/settings
+- **Framework**: React
+- **Meta Framework**: Next.js (App Router)
+- **Page Title**: 設定 | Example App
+
+## Selected Element
+- **Selector**: `#settings-form > div:nth-child(2) > button.btn-primary`
+- **Tag**: `<button>`
+- **Text**: "保存する"
+- **Attributes**:
+  - class: `btn btn-primary px-4 py-2`
+  - data-testid: `settings-submit-btn`
+  - type: `submit`
+
+## Component Tree (React)
+- `SettingsPage` → `SettingsForm` → `SubmitButton`
+- **Props**: `{ variant: "primary", disabled: false, onClick: fn }`
+- **State**: `{ isSubmitting: false }`
+```
+
+### フレームワーク未検出の静的サイトの場合
+
+フレームワークが検出されない場合、Component Tree セクションは省略されます。
+
+```markdown
+## User Instruction
+このリンクの遷移先を /members/tanaka/profile に変更したい
+
+## Page Context
+- **URL**: https://corporate.example.com/about
+- **Page Title**: 会社概要 | Example Corp
+
+## Selected Element
+- **Selector**: `.about-section > .team-list > li:nth-child(3) > a`
+- **Tag**: `<a>`
+- **Text**: "田中太郎"
+- **Attributes**:
+  - class: `team-member__link`
+  - href: `/members/tanaka`
+```
+
 ## 対応フレームワーク
 
 | フレームワーク | 検出内容 |
