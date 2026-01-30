@@ -6,6 +6,7 @@ import HighlightBox from "~components/HighlightBox"
 import Panel from "~components/Panel"
 import { generateSelector } from "~lib/selector"
 import type {
+  CaptureResponse,
   CollectResult,
   ComponentInfo,
   ElementInfo,
@@ -73,10 +74,12 @@ function isPlasmoElement(target: Element): boolean {
 export default function Overlay() {
   const [isActive, setIsActive] = useState(false)
   const [hoveredRect, setHoveredRect] = useState<Rect | null>(null)
+  const [selectedRect, setSelectedRect] = useState<Rect | null>(null)
   const [showPanel, setShowPanel] = useState(false)
   const [elementInfo, setElementInfo] = useState<ElementInfo | null>(null)
   const [frameworkInfo, setFrameworkInfo] = useState<FrameworkInfo | null>(null)
   const [componentInfo, setComponentInfo] = useState<ComponentInfo | null>(null)
+  const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null)
 
   const cursorStyleRef = useRef<HTMLStyleElement | null>(null)
 
@@ -89,9 +92,11 @@ export default function Overlay() {
             // Deactivating
             setShowPanel(false)
             setHoveredRect(null)
+            setSelectedRect(null)
             setElementInfo(null)
             setFrameworkInfo(null)
             setComponentInfo(null)
+            setScreenshotDataUrl(null)
           }
           return !prev
         })
@@ -168,10 +173,19 @@ export default function Overlay() {
         attributes: getAttributes(target),
       }
 
+      // Fix highlight on selected element (panel not shown yet)
+      const rect = target.getBoundingClientRect()
+      setSelectedRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      })
+
       setElementInfo(info)
       setFrameworkInfo(null)
       setComponentInfo(null)
-      setShowPanel(true)
+      setScreenshotDataUrl(null)
       setIsActive(false)
       setHoveredRect(null)
 
@@ -180,6 +194,21 @@ export default function Overlay() {
         { type: "PICK_CON_COLLECT", selector: info.selector },
         "*"
       )
+
+      // Wait for browser paint, then capture screenshot
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          chrome.runtime.sendMessage(
+            { type: "PICK_CON_CAPTURE" },
+            (response: CaptureResponse) => {
+              if (response?.success && response.dataUrl) {
+                setScreenshotDataUrl(response.dataUrl)
+              }
+              setShowPanel(true)
+            }
+          )
+        })
+      })
     }
 
     document.addEventListener("mousemove", handleMouseMove, true)
@@ -196,18 +225,22 @@ export default function Overlay() {
     setElementInfo(null)
     setFrameworkInfo(null)
     setComponentInfo(null)
+    setSelectedRect(null)
+    setScreenshotDataUrl(null)
   }, [])
 
-  if (!isActive && !showPanel) return null
+  if (!isActive && !showPanel && !selectedRect) return null
 
   return (
     <>
       {isActive && hoveredRect && <HighlightBox rect={hoveredRect} />}
+      {selectedRect && <HighlightBox rect={selectedRect} />}
       {showPanel && elementInfo && (
         <Panel
           elementInfo={elementInfo}
           frameworkInfo={frameworkInfo}
           componentInfo={componentInfo}
+          screenshotDataUrl={screenshotDataUrl}
           onClose={handleClose}
         />
       )}
