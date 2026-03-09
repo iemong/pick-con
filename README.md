@@ -1,17 +1,18 @@
 # tegakari
 
-Webページ上の要素を選択し、そのコンテキスト情報（要素情報、フレームワーク、コンポーネント階層など）をMarkdown形式で生成するChrome拡張機能です。
+Webページ上の要素を選択し、そのコンテキスト情報（要素情報、フレームワーク、コンポーネント階層など）をMarkdownまたはJSONL形式で生成するChrome拡張機能です。
 
-生成したMarkdownとスクリーンショットをクリップボードにコピーし、AIエディタ（Claude Code、Cursorなど）に貼り付けて活用できます。
+生成したテキストをクリップボードにコピーし、AIエディタ（Claude Code、Cursorなど）に貼り付けて活用できます。
 
 ## 機能
 
-- ページ上の要素をクリックして選択
+- ページ上の複数要素をクリックして選択・アノテーション
+- 選択要素にピンマーカーを表示し、各要素に指示テキストを入力可能
 - 選択要素のHTML情報（タグ、属性、テキスト）を取得
 - React / Vue のコンポーネント階層・Props・Stateを自動検出
 - Next.js / Nuxt などのメタフレームワークを検出
-- 選択要素がハイライトされた状態のスクリーンショットを撮影
-- Markdown + スクリーンショットをまとめてクリップボードにコピー
+- JSONL / Markdown 形式を切り替えてクリップボードにコピー
+- Dark / Light テーマ切り替え対応
 
 ## 導入方法
 
@@ -46,19 +47,19 @@ pnpm build
 
 1. 任意のWebページで拡張機能アイコンをクリック（カーソルが十字に変わります）
 2. 調べたい要素にマウスを合わせるとハイライト表示されます
-3. 要素をクリックして選択すると、スクリーンショットが撮影されパネルが表示されます
-4. 必要に応じて指示テキストを入力します
-5. コピーボタンをクリック
-   - **Copy with Screenshot** — Markdown + スクリーンショット画像をまとめてコピー
-   - **Copy Markdown Only** — Markdownテキストのみコピー
-6. AIエディタに貼り付けて活用してください
-7. `Esc` キーでパネルを閉じます
+3. 要素をクリックして選択すると、ピンマーカーが配置されパネルが表示されます
+4. 複数の要素を続けてクリックすることで、複数要素を同時にアノテーションできます
+5. 各アノテーションの指示テキスト欄に、変更・確認したい内容を入力します
+6. パネル下部で出力形式（JSONL / Markdown）を選択します
+7. **Copy All** ボタンをクリックしてクリップボードにコピーします
+8. AIエディタに貼り付けて活用してください
+9. `Esc` キーでパネルを閉じます
 
 ## 出力例
 
-「Copy with Screenshot」ではスクリーンショット画像と以下のMarkdownが同時にクリップボードにコピーされます。AIエディタに貼り付けると、画像とテキストの両方が渡されます。
+### Markdown形式
 
-### React (Next.js) サイトの場合
+#### React (Next.js) サイトの場合
 
 ```markdown
 ## User Instruction
@@ -85,7 +86,7 @@ pnpm build
 - **State**: `{ isSubmitting: false }`
 ```
 
-### フレームワーク未検出の静的サイトの場合
+#### フレームワーク未検出の静的サイトの場合
 
 フレームワークが検出されない場合、Component Tree セクションは省略されます。
 
@@ -104,6 +105,17 @@ pnpm build
 - **Attributes**:
   - class: `team-member__link`
   - href: `/members/tanaka`
+```
+
+### JSONL形式（デフォルト）
+
+JSONL（JSON Lines）形式では、各セクションが独立したJSON行として出力されます。AIエディタが構造化データとしてパースしやすい形式です。
+
+```jsonl
+{"type":"instruction","content":"この保存ボタンをクリックしたらconfirmダイアログを表示するようにしたい"}
+{"type":"pageContext","url":"https://example.com/dashboard/settings","pageTitle":"設定 | Example App","framework":"React","metaFramework":"Next.js (App Router)"}
+{"type":"selectedElement","selector":"#settings-form > div:nth-child(2) > button.btn-primary","tag":"button","text":"保存する","attributes":{"class":"btn btn-primary px-4 py-2","data-testid":"settings-submit-btn","type":"submit"}}
+{"type":"componentTree","framework":"react","hierarchy":["SettingsPage","SettingsForm","SubmitButton"],"props":{"variant":"primary","disabled":false,"onClick":"fn"},"state":{"isSubmitting":false}}
 ```
 
 ## 対応フレームワーク
