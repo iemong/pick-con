@@ -68,6 +68,9 @@ export interface Annotation {
   frameworkInfo: FrameworkInfo | null
   componentInfo: ComponentInfo | null
   instruction: string
+  /** Click position relative to document (pageX/pageY) */
+  pageX: number
+  pageY: number
 }
 
 export interface BatchInput {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
+import { useTheme } from "~lib/theme"
 import type { Annotation } from "~lib/types"
 
 interface Props {
@@ -17,50 +18,52 @@ export default function AnnotationPin({
   onUpdateInstruction,
   onDeselect,
 }: Props) {
+  const { theme } = useTheme()
   const [draft, setDraft] = useState(annotation.instruction)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Sync draft when annotation instruction changes externally (e.g. from panel)
   useEffect(() => {
     if (!isActive) {
       setDraft(annotation.instruction)
     }
   }, [annotation.instruction, isActive])
 
-  // Focus textarea when popover opens
   useEffect(() => {
     if (isActive) {
       setDraft(annotation.instruction)
-      // Small delay to ensure DOM is ready
       requestAnimationFrame(() => textareaRef.current?.focus())
     }
   }, [isActive, annotation.instruction])
-
-  const element = document.querySelector(annotation.elementInfo.selector)
-  if (!element) return null
-
-  const rect = element.getBoundingClientRect()
 
   const handleSave = () => {
     onUpdateInstruction(annotation.id, draft)
     onDeselect()
   }
 
-  // Place popover below pin; flip above if near bottom of viewport
-  const popoverTop = rect.top + 20
-  const flipUp = popoverTop + 120 > window.innerHeight
+  // Convert document-relative position to viewport-relative
+  const pinX = annotation.pageX - window.scrollX
+  const pinY = annotation.pageY - window.scrollY
+
+  // Popover positioning with edge detection
+  const popoverWidth = 260
+  const flipLeft = pinX + 30 + popoverWidth > window.innerWidth
+  const popoverTop = pinY + 28
+  const flipUp = popoverTop + 160 > window.innerHeight
+
   const popoverStyle: React.CSSProperties = {
     position: "fixed",
-    left: rect.right + 4,
-    width: 240,
+    width: popoverWidth,
+    ...(flipLeft
+      ? { right: window.innerWidth - pinX + 8 }
+      : { left: pinX + 28 }),
     ...(flipUp
-      ? { bottom: window.innerHeight - rect.top + 12 }
+      ? { bottom: window.innerHeight - pinY + 8 }
       : { top: popoverTop }),
   }
 
   return (
     <>
-      {/* Pin circle */}
+      {/* Pin marker */}
       <div
         onClick={(e) => {
           e.stopPropagation()
@@ -72,24 +75,26 @@ export default function AnnotationPin({
         }}
         style={{
           position: "fixed",
-          top: rect.top - 8,
-          left: rect.right + 4,
-          width: 22,
-          height: 22,
+          top: pinY - 12,
+          left: pinX - 12,
+          width: 24,
+          height: 24,
           borderRadius: "50%",
-          backgroundColor: isActive ? "#cba6f7" : "#585b70",
-          color: isActive ? "#1e1e2e" : "#cdd6f4",
+          backgroundColor: isActive ? theme.pinActiveBg : theme.pinBg,
+          color: isActive ? theme.pinActiveText : theme.pinText,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: 11,
           fontWeight: 700,
+          fontFamily: theme.fontMono,
           cursor: "pointer",
           zIndex: 2147483646,
+          border: isActive ? "2px solid rgba(255,255,255,0.25)" : "2px solid rgba(0,0,0,0.15)",
           boxShadow: isActive
-            ? "0 0 0 3px rgba(203, 166, 247, 0.3), 0 2px 8px rgba(0,0,0,0.3)"
-            : "0 2px 8px rgba(0,0,0,0.3)",
-          transition: "background-color 0.15s, box-shadow 0.15s",
+            ? `0 0 0 4px ${theme.accentMuted}, 0 2px 12px rgba(0,0,0,0.3)`
+            : "0 2px 8px rgba(0,0,0,0.25)",
+          transition: "background-color 0.15s, box-shadow 0.2s, border-color 0.15s",
           pointerEvents: "auto",
           userSelect: "none",
         }}>
@@ -102,44 +107,46 @@ export default function AnnotationPin({
           onClick={(e) => e.stopPropagation()}
           style={{
             ...popoverStyle,
-            backgroundColor: "#1e1e2e",
-            border: "1px solid #45475a",
-            borderRadius: 10,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-            padding: 10,
+            backgroundColor: theme.surface,
+            border: `1px solid ${theme.border}`,
+            borderRadius: 12,
+            boxShadow: theme.shadowStrong,
+            padding: 12,
             display: "flex",
             flexDirection: "column",
-            gap: 8,
+            gap: 10,
             zIndex: 2147483647,
             pointerEvents: "auto",
-            fontFamily:
-              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontFamily: theme.fontFamily,
           }}>
           {/* Element label */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span
               style={{
-                width: 18,
-                height: 18,
+                width: 20,
+                height: 20,
                 borderRadius: "50%",
-                backgroundColor: "#cba6f7",
-                color: "#1e1e2e",
+                backgroundColor: theme.accent,
+                color: theme.accentText,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 10,
                 fontWeight: 700,
+                fontFamily: theme.fontMono,
                 flexShrink: 0,
               }}>
               {annotation.id}
             </span>
             <code
               style={{
-                backgroundColor: "#313244",
-                color: "#cdd6f4",
-                padding: "1px 5px",
-                borderRadius: 3,
+                backgroundColor: theme.codeBg,
+                color: theme.textSecondary,
+                padding: "2px 6px",
+                borderRadius: 4,
                 fontSize: 11,
+                fontFamily: theme.fontMono,
+                border: `1px solid ${theme.border}`,
               }}>
               {`<${annotation.elementInfo.tag}>`}
             </code>
@@ -147,7 +154,7 @@ export default function AnnotationPin({
               <span
                 style={{
                   fontSize: 11,
-                  color: "#a6adc8",
+                  color: theme.textMuted,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -167,7 +174,6 @@ export default function AnnotationPin({
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 handleSave()
               }
-              // Prevent Escape from closing the whole overlay
               if (e.key === "Escape") {
                 e.stopPropagation()
                 handleSave()
@@ -177,42 +183,47 @@ export default function AnnotationPin({
             rows={3}
             style={{
               width: "100%",
-              backgroundColor: "#313244",
-              color: "#cdd6f4",
-              border: "1px solid #45475a",
-              borderRadius: 6,
-              padding: "6px 8px",
+              backgroundColor: theme.inputBg,
+              color: theme.textPrimary,
+              border: `1px solid ${theme.border}`,
+              borderRadius: 8,
+              padding: "8px 10px",
               resize: "vertical",
-              fontFamily: "inherit",
+              fontFamily: theme.fontFamily,
               fontSize: 12,
-              lineHeight: 1.4,
+              lineHeight: 1.5,
               boxSizing: "border-box",
               outline: "none",
+              transition: "border-color 0.15s",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#cba6f7"
+              e.currentTarget.style.borderColor = theme.accent
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = "#45475a"
+              e.currentTarget.style.borderColor = theme.border
             }}
           />
 
-          <button
-            onClick={handleSave}
-            style={{
-              width: "100%",
-              padding: "6px 0",
-              backgroundColor: "#cba6f7",
-              color: "#1e1e2e",
-              border: "none",
-              borderRadius: 6,
-              fontWeight: 600,
-              fontSize: 12,
-              cursor: "pointer",
-              transition: "background-color 0.15s",
-            }}>
-            Save
-          </button>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={handleSave}
+              style={{
+                flex: 1,
+                padding: "7px 0",
+                backgroundColor: theme.accent,
+                color: theme.accentText,
+                border: "none",
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 12,
+                fontFamily: theme.fontFamily,
+                cursor: "pointer",
+                transition: "background-color 0.15s",
+                letterSpacing: "0.02em",
+              }}>
+              Save
+            </button>
+          </div>
         </div>
       )}
     </>

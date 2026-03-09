@@ -1,3 +1,4 @@
+import { useTheme } from "~lib/theme"
 import type { Rect } from "~lib/types"
 
 interface Props {
@@ -5,6 +6,8 @@ interface Props {
 }
 
 export default function HighlightBox({ rect }: Props) {
+  const { theme } = useTheme()
+
   return (
     <div
       style={{
@@ -13,12 +16,12 @@ export default function HighlightBox({ rect }: Props) {
         left: rect.left,
         width: rect.width,
         height: rect.height,
-        border: "2px solid #4A90D9",
-        backgroundColor: "rgba(74, 144, 217, 0.15)",
+        border: `2px solid ${theme.accent}`,
+        backgroundColor: theme.accentMuted,
         pointerEvents: "none",
         zIndex: 2147483646,
         boxSizing: "border-box",
-        borderRadius: 2,
+        borderRadius: 3,
         transition: "all 0.05s ease-out",
       }}
     />

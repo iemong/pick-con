@@ -6,6 +6,7 @@ import AnnotationPanel from "~components/AnnotationPanel"
 import AnnotationPin from "~components/AnnotationPin"
 import HighlightBox from "~components/HighlightBox"
 import { generateSelector } from "~lib/selector"
+import { type ThemeMode, ThemeContext, darkTheme, lightTheme } from "~lib/theme"
 import type {
   Annotation,
   CollectResult,
@@ -78,6 +79,25 @@ export default function Overlay() {
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [activeAnnotationId, setActiveAnnotationId] = useState<number | null>(null)
   const [scrollTick, setScrollTick] = useState(0)
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark")
+
+  // Load saved theme on mount
+  useEffect(() => {
+    chrome.storage.local.get("pickConTheme", (result) => {
+      if (result.pickConTheme === "light" || result.pickConTheme === "dark") {
+        setThemeMode(result.pickConTheme)
+      }
+    })
+  }, [])
+
+  const theme = themeMode === "dark" ? darkTheme : lightTheme
+  const toggleMode = useCallback(() => {
+    setThemeMode((m) => {
+      const next = m === "dark" ? "light" : "dark"
+      chrome.storage.local.set({ pickConTheme: next })
+      return next
+    })
+  }, [])
 
   const nextIdRef = useRef(1)
   const pendingIdRef = useRef<number | null>(null)
@@ -199,6 +219,8 @@ export default function Overlay() {
         frameworkInfo: null,
         componentInfo: null,
         instruction: "",
+        pageX: e.pageX,
+        pageY: e.pageY,
       }
 
       setAnnotations((prev) => [...prev, newAnnotation])
@@ -262,7 +284,7 @@ export default function Overlay() {
   if (!isActive && annotations.length === 0) return null
 
   return (
-    <>
+    <ThemeContext.Provider value={{ theme, mode: themeMode, toggleMode }}>
       {isActive && hoveredRect && <HighlightBox rect={hoveredRect} />}
 
       {annotations.map((annotation) => (
@@ -284,6 +306,6 @@ export default function Overlay() {
         onDeleteAnnotation={handleDeleteAnnotation}
         onClose={handleClose}
       />
-    </>
+    </ThemeContext.Provider>
   )
 }
