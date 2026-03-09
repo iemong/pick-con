@@ -124,7 +124,7 @@ export default function AnnotationPanel({
               color: theme.accent,
               letterSpacing: "-0.02em",
             }}>
-            pick-con
+            tegakari
           </span>
           {annotations.length > 0 && (
             <span

@@ -1,16 +1,16 @@
 // Chrome runtime message (background → content script)
 export interface ToggleMessage {
-  type: "PICK_CON_TOGGLE"
+  type: "TEGAKARI_TOGGLE"
 }
 
 // PostMessage types (Isolated World ↔ Main World)
 export interface CollectRequest {
-  type: "PICK_CON_COLLECT"
+  type: "TEGAKARI_COLLECT"
   selector: string
 }
 
 export interface CollectResult {
-  type: "PICK_CON_RESULT"
+  type: "TEGAKARI_RESULT"
   framework: FrameworkInfo | null
   component: ComponentInfo | null
 }
@@ -42,7 +42,7 @@ export interface Rect {
 }
 
 export interface CaptureRequest {
-  type: "PICK_CON_CAPTURE"
+  type: "TEGAKARI_CAPTURE"
 }
 
 export interface CaptureResponse {

@@ -1,8 +1,8 @@
-# pick-con 出力仕様書
+# tegakari 出力仕様書
 
 ## 概要
 
-Chrome拡張機能「pick-con」は、Webページ上の要素を選択し、そのコンテキスト情報をMarkdownまたはJSONL形式で生成する。
+Chrome拡張機能「tegakari」は、Webページ上の要素を選択し、そのコンテキスト情報をMarkdownまたはJSONL形式で生成する。
 生成されたテキストはクリップボードにコピーされ、Claude CodeやCursorなどのAIエディタに貼り付けて使用する。
 
 ## 対象フレームワーク

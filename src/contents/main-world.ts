@@ -12,7 +12,7 @@ export const config: PlasmoCSConfig = {
 
 window.addEventListener("message", (event: MessageEvent) => {
   if (event.source !== window) return
-  if (event.data?.type !== "PICK_CON_COLLECT") return
+  if (event.data?.type !== "TEGAKARI_COLLECT") return
 
   const request = event.data as CollectRequest
   const element = document.querySelector(request.selector)
@@ -29,7 +29,7 @@ window.addEventListener("message", (event: MessageEvent) => {
   }
 
   const result: CollectResult = {
-    type: "PICK_CON_RESULT",
+    type: "TEGAKARI_RESULT",
     framework,
     component,
   }

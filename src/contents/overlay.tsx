@@ -83,9 +83,9 @@ export default function Overlay() {
 
   // Load saved theme on mount
   useEffect(() => {
-    chrome.storage.local.get("pickConTheme", (result) => {
-      if (result.pickConTheme === "light" || result.pickConTheme === "dark") {
-        setThemeMode(result.pickConTheme)
+    chrome.storage.local.get("tegakariTheme", (result) => {
+      if (result.tegakariTheme === "light" || result.tegakariTheme === "dark") {
+        setThemeMode(result.tegakariTheme)
       }
     })
   }, [])
@@ -94,7 +94,7 @@ export default function Overlay() {
   const toggleMode = useCallback(() => {
     setThemeMode((m) => {
       const next = m === "dark" ? "light" : "dark"
-      chrome.storage.local.set({ pickConTheme: next })
+      chrome.storage.local.set({ tegakariTheme: next })
       return next
     })
   }, [])
@@ -106,7 +106,7 @@ export default function Overlay() {
   // Listen for toggle from background
   useEffect(() => {
     const handler = (message: any) => {
-      if (message?.type === "PICK_CON_TOGGLE") {
+      if (message?.type === "TEGAKARI_TOGGLE") {
         setIsActive((prev) => {
           if (prev) {
             // Deactivating — clear everything
@@ -128,7 +128,7 @@ export default function Overlay() {
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.source !== window) return
-      if (event.data?.type !== "PICK_CON_RESULT") return
+      if (event.data?.type !== "TEGAKARI_RESULT") return
       const result = event.data as CollectResult
       const pendingId = pendingIdRef.current
       if (pendingId === null) return
@@ -150,7 +150,7 @@ export default function Overlay() {
   useEffect(() => {
     if (isActive) {
       const style = document.createElement("style")
-      style.id = "pick-con-cursor"
+      style.id = "tegakari-cursor"
       style.textContent = "* { cursor: crosshair !important; }"
       document.head.appendChild(style)
       cursorStyleRef.current = style
@@ -229,7 +229,7 @@ export default function Overlay() {
       // Request framework info from main world
       pendingIdRef.current = id
       window.postMessage(
-        { type: "PICK_CON_COLLECT", selector: info.selector },
+        { type: "TEGAKARI_COLLECT", selector: info.selector },
         "*"
       )
     }

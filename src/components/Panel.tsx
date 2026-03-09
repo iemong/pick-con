@@ -138,7 +138,7 @@ export default function Panel({
             fontSize: 14,
             color: "#cba6f7",
           }}>
-          pick-con
+          tegakari
         </span>
         <button
           onClick={onClose}

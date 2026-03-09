@@ -1,6 +1,6 @@
 {
-  "name": "pick-con",
-  "displayName": "pick-con",
+  "name": "tegakari",
+  "displayName": "tegakari",
   "version": "0.0.1",
   "description": "Web要素のコンテキスト情報をMarkdown形式で生成するChrome拡張",
   "scripts": {
