@@ -1,4 +1,4 @@
-import type { MarkdownInput } from "./types"
+import type { BatchInput, MarkdownInput } from "./types"
 
 export function generateMarkdown(input: MarkdownInput): string {
   const sections: string[] = []
@@ -59,6 +59,58 @@ export function generateMarkdown(input: MarkdownInput): string {
     }
 
     sections.push(`## ${label}\n${treeLines.join("\n")}`)
+  }
+
+  return sections.join("\n\n")
+}
+
+export function generateBatchMarkdown(input: BatchInput): string {
+  const sections: string[] = []
+
+  // Page Context (once)
+  const contextLines: string[] = []
+  contextLines.push(`- **URL**: ${input.pageUrl}`)
+  const firstFramework = input.annotations.find(a => a.frameworkInfo)?.frameworkInfo
+  if (firstFramework) {
+    if (firstFramework.framework) contextLines.push(`- **Framework**: ${firstFramework.framework}`)
+    if (firstFramework.metaFramework) contextLines.push(`- **Meta Framework**: ${firstFramework.metaFramework}`)
+  }
+  contextLines.push(`- **Page Title**: ${input.pageTitle}`)
+  sections.push(`## Page Context\n${contextLines.join("\n")}`)
+
+  // Each annotation
+  for (const annotation of input.annotations) {
+    const lines: string[] = []
+
+    if (annotation.instruction.trim()) {
+      lines.push(`**Instruction**: ${annotation.instruction.trim()}`)
+    }
+
+    const el = annotation.elementInfo
+    lines.push(`- **Selector**: \`${el.selector}\``)
+    lines.push(`- **Tag**: \`<${el.tag}>\``)
+    if (el.text) lines.push(`- **Text**: "${el.text}"`)
+    const attrEntries = Object.entries(el.attributes)
+    if (attrEntries.length > 0) {
+      lines.push(`- **Attributes**:`)
+      for (const [key, value] of attrEntries) {
+        lines.push(`  - ${key}: \`${value}\``)
+      }
+    }
+
+    if (annotation.componentInfo) {
+      const comp = annotation.componentInfo
+      if (comp.hierarchy.length > 0) {
+        lines.push(`- **Component**: \`${comp.hierarchy.join("` → `")}\``)
+      }
+      if (comp.props) lines.push(`- **Props**: \`${formatObject(comp.props)}\``)
+      if (comp.state) {
+        const label = comp.framework === "vue" ? "Data" : "State"
+        lines.push(`- **${label}**: \`${formatObject(comp.state)}\``)
+      }
+    }
+
+    sections.push(`## Annotation #${annotation.id}\n${lines.join("\n")}`)
   }
 
   return sections.join("\n\n")

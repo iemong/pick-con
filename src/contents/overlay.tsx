@@ -2,15 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { PlasmoCSConfig, PlasmoGetStyle } from "plasmo"
 
+import AnnotationPanel from "~components/AnnotationPanel"
+import AnnotationPin from "~components/AnnotationPin"
 import HighlightBox from "~components/HighlightBox"
-import Panel from "~components/Panel"
 import { generateSelector } from "~lib/selector"
 import type {
-  CaptureResponse,
+  Annotation,
   CollectResult,
-  ComponentInfo,
   ElementInfo,
-  FrameworkInfo,
   Rect,
 } from "~lib/types"
 
@@ -74,13 +73,12 @@ function isPlasmoElement(target: Element): boolean {
 export default function Overlay() {
   const [isActive, setIsActive] = useState(false)
   const [hoveredRect, setHoveredRect] = useState<Rect | null>(null)
-  const [selectedRect, setSelectedRect] = useState<Rect | null>(null)
-  const [showPanel, setShowPanel] = useState(false)
-  const [elementInfo, setElementInfo] = useState<ElementInfo | null>(null)
-  const [frameworkInfo, setFrameworkInfo] = useState<FrameworkInfo | null>(null)
-  const [componentInfo, setComponentInfo] = useState<ComponentInfo | null>(null)
-  const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(null)
+  const [annotations, setAnnotations] = useState<Annotation[]>([])
+  const [activeAnnotationId, setActiveAnnotationId] = useState<number | null>(null)
+  const [scrollTick, setScrollTick] = useState(0)
 
+  const nextIdRef = useRef(1)
+  const pendingIdRef = useRef<number | null>(null)
   const cursorStyleRef = useRef<HTMLStyleElement | null>(null)
 
   // Listen for toggle from background
@@ -89,14 +87,12 @@ export default function Overlay() {
       if (message?.type === "PICK_CON_TOGGLE") {
         setIsActive((prev) => {
           if (prev) {
-            // Deactivating
-            setShowPanel(false)
+            // Deactivating — clear everything
+            setAnnotations([])
+            setActiveAnnotationId(null)
             setHoveredRect(null)
-            setSelectedRect(null)
-            setElementInfo(null)
-            setFrameworkInfo(null)
-            setComponentInfo(null)
-            setScreenshotDataUrl(null)
+            nextIdRef.current = 1
+            pendingIdRef.current = null
           }
           return !prev
         })
@@ -112,14 +108,23 @@ export default function Overlay() {
       if (event.source !== window) return
       if (event.data?.type !== "PICK_CON_RESULT") return
       const result = event.data as CollectResult
-      setFrameworkInfo(result.framework)
-      setComponentInfo(result.component)
+      const pendingId = pendingIdRef.current
+      if (pendingId === null) return
+      pendingIdRef.current = null
+
+      setAnnotations((prev) =>
+        prev.map((a) =>
+          a.id === pendingId
+            ? { ...a, frameworkInfo: result.framework, componentInfo: result.component }
+            : a
+        )
+      )
     }
     window.addEventListener("message", handler)
     return () => window.removeEventListener("message", handler)
   }, [])
 
-  // Cursor style when inspector is active
+  // Cursor style when picking
   useEffect(() => {
     if (isActive) {
       const style = document.createElement("style")
@@ -137,7 +142,19 @@ export default function Overlay() {
     }
   }, [isActive])
 
-  // Mouse handlers for inspector mode
+  // Scroll listener to keep pins positioned correctly
+  useEffect(() => {
+    if (!isActive && annotations.length === 0) return
+    const onScroll = () => setScrollTick((t) => t + 1)
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true })
+    window.addEventListener("resize", onScroll)
+    return () => {
+      window.removeEventListener("scroll", onScroll, { capture: true })
+      window.removeEventListener("resize", onScroll)
+    }
+  }, [isActive, annotations.length])
+
+  // Mouse handlers for picking
   useEffect(() => {
     if (!isActive) return
 
@@ -173,42 +190,24 @@ export default function Overlay() {
         attributes: getAttributes(target),
       }
 
-      // Fix highlight on selected element (panel not shown yet)
-      const rect = target.getBoundingClientRect()
-      setSelectedRect({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      })
+      const id = nextIdRef.current++
+      const newAnnotation: Annotation = {
+        id,
+        elementInfo: info,
+        frameworkInfo: null,
+        componentInfo: null,
+        instruction: "",
+      }
 
-      setElementInfo(info)
-      setFrameworkInfo(null)
-      setComponentInfo(null)
-      setScreenshotDataUrl(null)
-      setIsActive(false)
-      setHoveredRect(null)
+      setAnnotations((prev) => [...prev, newAnnotation])
+      setActiveAnnotationId(id)
 
       // Request framework info from main world
+      pendingIdRef.current = id
       window.postMessage(
         { type: "PICK_CON_COLLECT", selector: info.selector },
         "*"
       )
-
-      // Wait for browser paint, then capture screenshot
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          chrome.runtime.sendMessage(
-            { type: "PICK_CON_CAPTURE" },
-            (response: CaptureResponse) => {
-              if (response?.success && response.dataUrl) {
-                setScreenshotDataUrl(response.dataUrl)
-              }
-              setShowPanel(true)
-            }
-          )
-        })
-      })
     }
 
     document.addEventListener("mousemove", handleMouseMove, true)
@@ -220,18 +219,32 @@ export default function Overlay() {
     }
   }, [isActive])
 
-  const handleClose = useCallback(() => {
-    setShowPanel(false)
-    setElementInfo(null)
-    setFrameworkInfo(null)
-    setComponentInfo(null)
-    setSelectedRect(null)
-    setScreenshotDataUrl(null)
+  const handleUpdateInstruction = useCallback(
+    (id: number, instruction: string) => {
+      setAnnotations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, instruction } : a))
+      )
+    },
+    []
+  )
+
+  const handleDeleteAnnotation = useCallback((id: number) => {
+    setAnnotations((prev) => prev.filter((a) => a.id !== id))
+    setActiveAnnotationId((prev) => (prev === id ? null : prev))
   }, [])
 
-  // Close panel on Escape key
+  const handleClose = useCallback(() => {
+    setIsActive(false)
+    setAnnotations([])
+    setActiveAnnotationId(null)
+    setHoveredRect(null)
+    nextIdRef.current = 1
+    pendingIdRef.current = null
+  }, [])
+
+  // Escape key
   useEffect(() => {
-    if (!showPanel) return
+    if (!isActive && annotations.length === 0) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         handleClose()
@@ -239,23 +252,36 @@ export default function Overlay() {
     }
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [showPanel, handleClose])
+  }, [isActive, annotations.length, handleClose])
 
-  if (!isActive && !showPanel && !selectedRect) return null
+  // Suppress scrollTick unused warning — it's used to trigger re-renders
+  void scrollTick
+
+  if (!isActive && annotations.length === 0) return null
 
   return (
     <>
       {isActive && hoveredRect && <HighlightBox rect={hoveredRect} />}
-      {selectedRect && <HighlightBox rect={selectedRect} />}
-      {showPanel && elementInfo && (
-        <Panel
-          elementInfo={elementInfo}
-          frameworkInfo={frameworkInfo}
-          componentInfo={componentInfo}
-          screenshotDataUrl={screenshotDataUrl}
-          onClose={handleClose}
+
+      {annotations.map((annotation) => (
+        <AnnotationPin
+          key={annotation.id}
+          annotation={annotation}
+          isActive={activeAnnotationId === annotation.id}
+          onClick={() => setActiveAnnotationId(annotation.id)}
+          onUpdateInstruction={handleUpdateInstruction}
+          onDeselect={() => setActiveAnnotationId(null)}
         />
-      )}
+      ))}
+
+      <AnnotationPanel
+        annotations={annotations}
+        activeAnnotationId={activeAnnotationId}
+        onSelectAnnotation={setActiveAnnotationId}
+        onUpdateInstruction={handleUpdateInstruction}
+        onDeleteAnnotation={handleDeleteAnnotation}
+        onClose={handleClose}
+      />
     </>
   )
 }
