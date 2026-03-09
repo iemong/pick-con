@@ -63,10 +63,12 @@ function truncateText(text: string, maxLength: number): string {
   return trimmed.slice(0, maxLength) + "..."
 }
 
-function isPlasmoElement(target: Element): boolean {
-  return !!(
-    target.closest?.("[id^='plasmo-']") ||
-    target.id?.startsWith("plasmo-")
+function isFromPlasmoUI(e: Event): boolean {
+  return e.composedPath().some(
+    (node) =>
+      node instanceof HTMLElement &&
+      (node.id?.startsWith("plasmo-") ||
+        node.tagName?.toLowerCase().startsWith("plasmo-"))
   )
 }
 
@@ -159,11 +161,11 @@ export default function Overlay() {
     if (!isActive) return
 
     const handleMouseMove = (e: MouseEvent) => {
-      const target = e.target as Element
-      if (isPlasmoElement(target)) {
+      if (isFromPlasmoUI(e)) {
         setHoveredRect(null)
         return
       }
+      const target = e.target as Element
       const rect = target.getBoundingClientRect()
       setHoveredRect({
         top: rect.top,
@@ -174,8 +176,8 @@ export default function Overlay() {
     }
 
     const handleClick = (e: MouseEvent) => {
+      if (isFromPlasmoUI(e)) return
       const target = e.target as Element
-      if (isPlasmoElement(target)) return
 
       e.preventDefault()
       e.stopPropagation()
