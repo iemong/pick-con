@@ -2,8 +2,8 @@
 
 ## 概要
 
-Chrome拡張機能「pick-con」は、Webページ上の要素を選択し、そのコンテキスト情報をMarkdown形式で生成する。
-生成されたMarkdownはクリップボードにコピーされ、Claude CodeやCursorなどのAIエディタに貼り付けて使用する。
+Chrome拡張機能「pick-con」は、Webページ上の要素を選択し、そのコンテキスト情報をMarkdownまたはJSONL形式で生成する。
+生成されたテキストはクリップボードにコピーされ、Claude CodeやCursorなどのAIエディタに貼り付けて使用する。
 
 ## 対象フレームワーク
 
@@ -13,7 +13,7 @@ Chrome拡張機能「pick-con」は、Webページ上の要素を選択し、そ
 
 ## 出力形式
 
-Markdown形式。クリップボードにコピーして使用する。
+MarkdownまたはJSONL形式を選択可能。クリップボードにコピーして使用する。デフォルトはJSONL。
 
 ## セクション構成
 
@@ -182,6 +182,47 @@ Markdown形式。クリップボードにコピーして使用する。
   </div>
 </div>
 ```
+```
+
+## JSONL出力形式
+
+JSONL（JSON Lines）形式では、各セクションが独立したJSON行として出力される。AIエディタが構造化データとしてパースしやすい形式。
+
+### 行構成
+
+| 行 | type | 出力条件 |
+|---|---|---|
+| 1 | `instruction` | ユーザー入力がある場合のみ |
+| 2 | `pageContext` | 常に出力 |
+| 3 | `selectedElement` | 常に出力 |
+| 4 | `componentTree` | フレームワーク検出時のみ |
+
+### JSONL出力例
+
+#### React (Next.js) サイト
+
+```jsonl
+{"type":"instruction","content":"この保存ボタンをクリックしたらconfirmダイアログを表示するようにしたい"}
+{"type":"pageContext","url":"https://example.com/dashboard/settings","pageTitle":"設定 | Example App","framework":"React","metaFramework":"Next.js (App Router)"}
+{"type":"selectedElement","selector":"#settings-form > div:nth-child(2) > button.btn-primary","tag":"button","text":"保存する","attributes":{"class":"btn btn-primary px-4 py-2","data-testid":"settings-submit-btn","type":"submit"}}
+{"type":"componentTree","framework":"react","hierarchy":["SettingsPage","SettingsForm","SubmitButton"],"props":{"variant":"primary","disabled":false,"onClick":"fn"},"state":{"isSubmitting":false}}
+```
+
+#### フレームワーク未検出の静的サイト
+
+```jsonl
+{"type":"instruction","content":"このリンクの遷移先を /members/tanaka/profile に変更したい"}
+{"type":"pageContext","url":"https://corporate.example.com/about","pageTitle":"会社概要 | Example Corp"}
+{"type":"selectedElement","selector":".about-section > .team-list > li:nth-child(3) > a","tag":"a","text":"田中太郎","attributes":{"class":"team-member__link","href":"/members/tanaka"}}
+```
+
+#### Vue (Nuxt) サイト
+
+```jsonl
+{"type":"instruction","content":"割引価格の表示フォーマットをカンマ区切りに変更したい"}
+{"type":"pageContext","url":"https://shop.example.com/products/123","pageTitle":"商品詳細 | Example Shop","framework":"Vue","metaFramework":"Nuxt"}
+{"type":"selectedElement","selector":".product-card > .price-section > span.price","tag":"span","text":"¥1,980","attributes":{"class":"price price--discount","data-original-price":"2,480"}}
+{"type":"componentTree","framework":"vue","hierarchy":["ProductDetail","PriceSection","PriceDisplay"],"props":{"price":1980,"originalPrice":2480,"currency":"JPY"},"data":{"showDiscount":true}}
 ```
 
 ## 技術的制約

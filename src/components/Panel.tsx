@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react"
 
+import { generateJsonl } from "~lib/jsonl-generator"
 import { generateMarkdown } from "~lib/markdown-generator"
-import type { ComponentInfo, ElementInfo, FrameworkInfo } from "~lib/types"
+import type { ComponentInfo, ElementInfo, FrameworkInfo, OutputFormat } from "~lib/types"
 
 interface Props {
   elementInfo: ElementInfo
@@ -19,18 +20,20 @@ export default function Panel({
   onClose,
 }: Props) {
   const [instruction, setInstruction] = useState("")
-  const [copied, setCopied] = useState<"screenshot" | "markdown" | false>(false)
+  const [copied, setCopied] = useState<"text" | "screenshot" | "both" | false>(false)
+  const [outputFormat, setOutputFormat] = useState<OutputFormat>("jsonl")
 
-  const buildMarkdown = useCallback(() => {
-    return generateMarkdown({
+  const buildOutput = useCallback(() => {
+    const input = {
       instruction,
       pageUrl: location.href,
       pageTitle: document.title,
       frameworkInfo,
       elementInfo,
       componentInfo,
-    })
-  }, [instruction, frameworkInfo, elementInfo, componentInfo])
+    }
+    return outputFormat === "jsonl" ? generateJsonl(input) : generateMarkdown(input)
+  }, [instruction, frameworkInfo, elementInfo, componentInfo, outputFormat])
 
   const copyTextFallback = useCallback((text: string) => {
     try {
@@ -47,43 +50,57 @@ export default function Panel({
     }
   }, [])
 
-  const handleCopyWithScreenshot = useCallback(async () => {
-    const markdown = buildMarkdown()
+  const handleCopyText = useCallback(async () => {
+    const output = buildOutput()
+
+    try {
+      await navigator.clipboard.writeText(output)
+    } catch {
+      copyTextFallback(output)
+    }
+
+    setCopied("text")
+    setTimeout(() => setCopied(false), 2000)
+  }, [buildOutput, copyTextFallback])
+
+  const handleCopyScreenshot = useCallback(async () => {
+    try {
+      const response = await fetch(screenshotDataUrl!)
+      const blob = await response.blob()
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ])
+    } catch {
+      // silently fail — image-only copy not supported
+    }
+
+    setCopied("screenshot")
+    setTimeout(() => setCopied(false), 2000)
+  }, [screenshotDataUrl])
+
+  const handleCopyBoth = useCallback(async () => {
+    const output = buildOutput()
 
     try {
       const response = await fetch(screenshotDataUrl!)
       const blob = await response.blob()
       await navigator.clipboard.write([
         new ClipboardItem({
-          "text/plain": new Blob([markdown], { type: "text/plain" }),
+          "text/plain": new Blob([output], { type: "text/plain" }),
           "image/png": blob,
         }),
       ])
     } catch {
-      // Fallback: copy text only
       try {
-        await navigator.clipboard.writeText(markdown)
+        await navigator.clipboard.writeText(output)
       } catch {
-        copyTextFallback(markdown)
+        copyTextFallback(output)
       }
     }
 
-    setCopied("screenshot")
+    setCopied("both")
     setTimeout(() => setCopied(false), 2000)
-  }, [buildMarkdown, screenshotDataUrl, copyTextFallback])
-
-  const handleCopyMarkdown = useCallback(async () => {
-    const markdown = buildMarkdown()
-
-    try {
-      await navigator.clipboard.writeText(markdown)
-    } catch {
-      copyTextFallback(markdown)
-    }
-
-    setCopied("markdown")
-    setTimeout(() => setCopied(false), 2000)
-  }, [buildMarkdown, copyTextFallback])
+  }, [buildOutput, screenshotDataUrl, copyTextFallback])
 
   return (
     <div
@@ -195,50 +212,96 @@ export default function Panel({
         />
       </div>
 
+      {/* Format toggle */}
+      <div style={{ padding: "0 16px 8px", display: "flex", gap: 4 }}>
+        {(["jsonl", "markdown"] as const).map((fmt) => (
+          <button
+            key={fmt}
+            onClick={() => setOutputFormat(fmt)}
+            style={{
+              flex: 1,
+              padding: "6px 0",
+              backgroundColor: outputFormat === fmt ? "#cba6f7" : "transparent",
+              color: outputFormat === fmt ? "#1e1e2e" : "#6c7086",
+              border: outputFormat === fmt ? "none" : "1px solid #45475a",
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: 11,
+              cursor: "pointer",
+              transition: "background-color 0.2s, color 0.2s",
+            }}>
+            {fmt === "jsonl" ? "JSONL" : "Markdown"}
+          </button>
+        ))}
+      </div>
+
       {/* Copy buttons */}
       <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Primary: copy text */}
         <button
-          onClick={handleCopyWithScreenshot}
-          disabled={!screenshotDataUrl}
+          onClick={handleCopyText}
           style={{
             width: "100%",
             padding: "10px 0",
-            backgroundColor: copied === "screenshot"
-              ? "#a6e3a1"
-              : screenshotDataUrl
-                ? "#cba6f7"
-                : "#45475a",
+            backgroundColor: copied === "text" ? "#a6e3a1" : "#cba6f7",
             color: "#1e1e2e",
             border: "none",
             borderRadius: 8,
             fontWeight: 600,
             fontSize: 13,
-            cursor: screenshotDataUrl ? "pointer" : "default",
-            transition: "background-color 0.2s",
-            opacity: screenshotDataUrl ? 1 : 0.6,
-          }}>
-          {copied === "screenshot"
-            ? "Copied!"
-            : screenshotDataUrl
-              ? "Copy with Screenshot"
-              : "Capturing..."}
-        </button>
-        <button
-          onClick={handleCopyMarkdown}
-          style={{
-            width: "100%",
-            padding: "10px 0",
-            backgroundColor: copied === "markdown" ? "#a6e3a1" : "transparent",
-            color: copied === "markdown" ? "#1e1e2e" : "#cdd6f4",
-            border: "1px solid #45475a",
-            borderRadius: 8,
-            fontWeight: 600,
-            fontSize: 13,
             cursor: "pointer",
-            transition: "background-color 0.2s, color 0.2s",
+            transition: "background-color 0.2s",
           }}>
-          {copied === "markdown" ? "Copied!" : "Copy Markdown Only"}
+          {copied === "text" ? "Copied!" : `Copy ${outputFormat === "jsonl" ? "JSONL" : "Markdown"}`}
         </button>
+
+        {/* Secondary row: screenshot / both */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={handleCopyScreenshot}
+            disabled={!screenshotDataUrl}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              backgroundColor: copied === "screenshot" ? "#a6e3a1" : "transparent",
+              color: copied === "screenshot" ? "#1e1e2e" : "#cdd6f4",
+              border: "1px solid #45475a",
+              borderRadius: 8,
+              fontWeight: 600,
+              fontSize: 12,
+              cursor: screenshotDataUrl ? "pointer" : "default",
+              transition: "background-color 0.2s, color 0.2s",
+              opacity: screenshotDataUrl ? 1 : 0.5,
+            }}>
+            {copied === "screenshot"
+              ? "Copied!"
+              : screenshotDataUrl
+                ? "Screenshot"
+                : "Capturing..."}
+          </button>
+          <button
+            onClick={handleCopyBoth}
+            disabled={!screenshotDataUrl}
+            style={{
+              flex: 1,
+              padding: "10px 0",
+              backgroundColor: copied === "both" ? "#a6e3a1" : "transparent",
+              color: copied === "both" ? "#1e1e2e" : "#cdd6f4",
+              border: "1px solid #45475a",
+              borderRadius: 8,
+              fontWeight: 600,
+              fontSize: 12,
+              cursor: screenshotDataUrl ? "pointer" : "default",
+              transition: "background-color 0.2s, color 0.2s",
+              opacity: screenshotDataUrl ? 1 : 0.5,
+            }}>
+            {copied === "both"
+              ? "Copied!"
+              : screenshotDataUrl
+                ? "Text + Screenshot"
+                : "Capturing..."}
+          </button>
+        </div>
       </div>
     </div>
   )

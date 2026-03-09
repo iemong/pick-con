@@ -59,3 +59,19 @@ export interface MarkdownInput {
   elementInfo: ElementInfo
   componentInfo: ComponentInfo | null
 }
+
+export type OutputFormat = "markdown" | "jsonl"
+
+export interface Annotation {
+  id: number
+  elementInfo: ElementInfo
+  frameworkInfo: FrameworkInfo | null
+  componentInfo: ComponentInfo | null
+  instruction: string
+}
+
+export interface BatchInput {
+  pageUrl: string
+  pageTitle: string
+  annotations: Annotation[]
+}
