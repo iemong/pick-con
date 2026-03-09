@@ -1,0 +1,9 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm tsc --noEmit
+    test:
+      glob: "*.{ts,tsx}"
+      run: pnpm test
