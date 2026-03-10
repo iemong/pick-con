@@ -2,3 +2,4 @@ node_modules/
 .plasmo/
 *.log
 .DS_Store
+coverage/
