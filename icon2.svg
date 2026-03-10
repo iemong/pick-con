@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- 背景色 (Surface Hover から Background へ) -->
+    <linearGradient id="base-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181d2a" /> <!-- Surface Hover -->
+      <stop offset="100%" stop-color="#0b0e14" /> <!-- Background -->
+    </linearGradient>
+    
+    <!-- 中央のピックブロック (Accent Hover から Accent へ) -->
+    <linearGradient id="pick-block" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" /> <!-- Accent Hover -->
+      <stop offset="100%" stop-color="#2563eb" /> <!-- Accent -->
+    </linearGradient>
+
+    <!-- 複合的な影と発光（過度なギラつきを抑え、クリーンな光に） -->
+    <filter id="glow-shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.4" result="shadow"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#2563eb" flood-opacity="0.4" result="glow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 1. ベースアイコン -->
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="url(#base-bg)" />
+  <!-- ボーダーリング（Border色とBorder Focus色を使用し、UIの境界線を表現） -->
+  <rect x="2" y="2" width="124" height="124" rx="26" fill="none" stroke="#1f2736" stroke-width="4" />
+  <rect x="4" y="4" width="120" height="120" rx="24" fill="none" stroke="#2d3a4f" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- 2. DOMタグ (Muted色を使用し、背景に馴染む控えめなトーンに) -->
+  <g stroke="#4b5468" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 42 36 L 18 64 L 42 92" />
+    <path d="M 86 36 L 110 64 L 86 92" />
+  </g>
+
+  <!-- 3. Pickされたブロック -->
+  <g filter="url(#glow-shadow)">
+    <rect x="36" y="44" width="56" height="40" rx="10" fill="url(#pick-block)" />
+    <!-- グラス風ハイライト（ソリッド感を出すために少しシャープに） -->
+    <rect x="37" y="45" width="54" height="16" rx="8" fill="rgba(255,255,255,0.12)" />
+    <!-- ブロックのボーダー (Primary Textの透過でエッジを立たせる) -->
+    <rect x="36" y="44" width="56" height="40" rx="10" fill="none" stroke="rgba(212,218,229,0.25)" stroke-width="1.5" />
+    
+    <!-- コードのライン（Primary色を活用） -->
+    <rect x="46" y="52" width="20" height="6" rx="3" fill="#ffffff" />
+    <rect x="46" y="66" width="36" height="6" rx="3" fill="#d4dae5" opacity="0.9" />
+  </g>
+</svg>
