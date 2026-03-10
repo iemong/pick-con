@@ -17,16 +17,13 @@ export function collectReactComponent(
   const fiber = getFiber(element)
   if (!fiber) return null
 
-  const hierarchy = getComponentHierarchy(fiber)
+  const { hierarchy, nearestComponent } = analyzeComponentTree(fiber)
   if (hierarchy.length === 0) return null
 
-  const nearestComponent = findNearestComponent(fiber)
-  const props = nearestComponent
-    ? safeSerialize(nearestComponent.memoizedProps)
-    : undefined
-  const state = nearestComponent
-    ? extractState(nearestComponent)
-    : undefined
+  // nearestComponent is guaranteed non-null when hierarchy is non-empty
+  const component = nearestComponent!
+  const props = safeSerialize(component.memoizedProps)
+  const state = extractState(component)
 
   return {
     framework: "react",
@@ -45,12 +42,17 @@ function getFiber(element: Element): FiberNode | null {
   return null
 }
 
-function getComponentHierarchy(fiber: FiberNode): string[] {
+function analyzeComponentTree(fiber: FiberNode): {
+  hierarchy: string[]
+  nearestComponent: FiberNode | null
+} {
   const components: string[] = []
+  let nearestComponent: FiberNode | null = null
   let current: FiberNode | null = fiber
 
   while (current) {
     if (isComponentFiber(current)) {
+      if (!nearestComponent) nearestComponent = current
       const name = getComponentName(current)
       if (name) {
         components.unshift(name)
@@ -59,16 +61,7 @@ function getComponentHierarchy(fiber: FiberNode): string[] {
     current = current.return
   }
 
-  return components
-}
-
-function findNearestComponent(fiber: FiberNode): FiberNode | null {
-  let current: FiberNode | null = fiber
-  while (current) {
-    if (isComponentFiber(current)) return current
-    current = current.return
-  }
-  return null
+  return { hierarchy: components, nearestComponent }
 }
 
 function isComponentFiber(fiber: FiberNode): boolean {
