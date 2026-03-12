@@ -1,0 +1,23 @@
+{
+  "name": "@tegakari/browser-capture",
+  "version": "0.1.0",
+  "description": "agent-browserで開発中Webアプリの動作検証・キャプチャーを行うCLIツール",
+  "type": "module",
+  "bin": {
+    "browser-capture": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "agent-browser": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.18"
+  }
+}
